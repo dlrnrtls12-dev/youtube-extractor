@@ -8,5 +8,7 @@
 - Python: https://www.python.org (PSF License)
 - PyInstaller: https://pyinstaller.org (GPL with bootloader exception)
 - Kotlin: https://github.com/JetBrains/kotlin (Apache-2.0)
+- CustomTkinter: https://github.com/TomSchimansky/CustomTkinter (MIT)
 
 The app does not call a hosted AI or extraction API. Engine updates access the yt-dlp official GitHub release.
+
