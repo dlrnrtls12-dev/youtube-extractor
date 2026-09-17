@@ -4,7 +4,8 @@ New-Item -ItemType Directory -Force -Path bin | Out-Null
 $version = '2026.08.19'
 $release = "https://github.com/yt-dlp/yt-dlp/releases/download/$version"
 Invoke-WebRequest "$release/yt-dlp.exe" -OutFile bin/yt-dlp.exe
-$checksums = (Invoke-WebRequest "$release/SHA2-256SUMS").Content
+Invoke-WebRequest "$release/SHA2-256SUMS" -OutFile bin/checksums.txt
+$checksums = Get-Content -LiteralPath bin/checksums.txt -Raw
 $expected = (($checksums -split "`n" | Where-Object { $_ -match '\s+yt-dlp\.exe\s*$' }) -split '\s+')[0]
 if (-not $expected -or (Get-FileHash bin/yt-dlp.exe -Algorithm SHA256).Hash.ToLower() -ne $expected.ToLower()) { throw 'yt-dlp checksum mismatch' }
 $ffmpeg = python -c "import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())"
@@ -22,3 +23,4 @@ if ($test.ExitCode -ne 0) { throw 'Packaged app self-test failed' }
 Copy-Item ../README.md dist/YouTubeExtractor/README.md
 Copy-Item ../THIRD_PARTY.md dist/YouTubeExtractor/THIRD_PARTY.md
 Compress-Archive -Path dist/YouTubeExtractor -DestinationPath YouTubeExtractor-Windows.zip -Force
+
