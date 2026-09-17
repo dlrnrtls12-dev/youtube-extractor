@@ -68,64 +68,18 @@ def options(url, kind, quality, language, folder):
     return args + ['--', canonical_url(url)]
 
 
-class App:
+from design import StudioUI
+
+
+class App(StudioUI):
     def __init__(self):
-        import tkinter as tk
-        from tkinter import ttk
-        self.tk, self.ttk = tk, ttk
-        self.root = tk.Tk()
-        self.root.title('유튜브 추출기 · 내 기기에서 실행')
-        self.root.geometry('760x660')
-        self.root.minsize(650, 590)
-        self.root.configure(bg='#111827')
-        style = ttk.Style()
-        style.theme_use('clam')
-        style.configure('.', font=('맑은 고딕', 11))
-        style.configure('TFrame', background='#111827')
-        style.configure('TLabel', background='#111827', foreground='#e5e7eb')
-        style.configure('TRadiobutton', background='#111827', foreground='#e5e7eb')
-        style.map('TRadiobutton', background=[('active', '#243149')])
-        style.configure('TButton', padding=10)
-        panel = ttk.Frame(self.root, padding=28)
-        panel.pack(fill='both', expand=True)
-        ttk.Label(panel, text='유튜브 추출기', font=('맑은 고딕', 24, 'bold')).pack(anchor='w')
-        ttk.Label(panel, text='이 PC에서 직접 처리 · 서버 비용과 AI API 사용 없음').pack(anchor='w', pady=(5,22))
-        ttk.Label(panel, text='유튜브 링크').pack(anchor='w')
-        self.url = tk.StringVar()
-        ttk.Entry(panel, textvariable=self.url, font=('맑은 고딕', 12)).pack(fill='x', pady=8, ipady=8)
-        modes = ttk.Frame(panel)
-        modes.pack(fill='x', pady=10)
-        self.kind = tk.StringVar(value='subtitle')
-        for label, value in [('자막 TXT / SRT', 'subtitle'), ('영상 MP4', 'video'), ('음성 MP3', 'audio')]:
-            ttk.Radiobutton(modes, text=label, variable=self.kind, value=value).pack(side='left', padx=(0,20))
-        opts = ttk.Frame(panel)
-        opts.pack(fill='x', pady=8)
-        self.quality, self.language, self.fmt = tk.StringVar(value='720'), tk.StringVar(value='ko'), tk.StringVar(value='txt')
-        for label, var, values in [('최대 화질',self.quality,['360','720','1080']), ('자막 언어',self.language,['ko','en','ja','zh-Hans']), ('자막 형식',self.fmt,['txt','srt'])]:
-            box = ttk.Frame(opts)
-            box.pack(side='left', padx=(0,25))
-            ttk.Label(box, text=label).pack(anchor='w')
-            ttk.Combobox(box, state='readonly', textvariable=var, values=values, width=13).pack(pady=5)
-        ttk.Label(panel, text='TXT: 시간 없이 이어 읽기 · 원본 화자 표시 유지\n화자 표시가 없는 자막의 목소리를 자동 구분하지는 않습니다.').pack(anchor='w', pady=8)
-        self.folder = Path.home() / 'Downloads' / 'YouTube Extractor'
-        self.destination = tk.StringVar(value=str(self.folder))
-        ttk.Label(panel, textvariable=self.destination, wraplength=650).pack(anchor='w', pady=(12,0))
-        buttons = ttk.Frame(panel)
-        buttons.pack(fill='x', pady=12)
-        self.start = ttk.Button(buttons, text='추출 시작 ↓', command=self.begin)
-        self.start.pack(side='left')
-        self.cancel_button = ttk.Button(buttons, text='취소', command=self.cancel, state='disabled')
-        self.cancel_button.pack(side='left', padx=8)
-        ttk.Button(buttons, text='저장 위치', command=self.choose).pack(side='left')
-        ttk.Button(buttons, text='폴더 열기', command=self.open_folder).pack(side='right')
-        self.status = tk.StringVar(value='링크를 입력하고 추출을 시작하세요.')
-        ttk.Label(panel, textvariable=self.status, wraplength=650).pack(fill='x', pady=10)
-        ttk.Label(panel, text='본인 소유 또는 저장 허가를 받은 콘텐츠에 사용하세요.', font=('맑은 고딕',9)).pack(side='bottom', anchor='w')
         import queue
         self.events = queue.Queue()
         self.stop = threading.Event()
         self.worker = None
         self.proc = None
+        self.setup()
+        self.choose_mode('subtitle')
         self.root.protocol('WM_DELETE_WINDOW', self.close)
         self.root.after(150, self.poll)
 
@@ -151,6 +105,9 @@ class App:
             self.status.set(str(e))
             return
         self.stop.clear()
+        self.busy_ui(True)
+        self.state_label.configure(text='●  추출 중',text_color=self.accent)
+        self.progress.configure(mode='indeterminate'); self.progress.start()
         self.start.configure(state='disabled')
         self.cancel_button.configure(state='normal')
         self.status.set('기기에서 추출을 시작합니다…')
@@ -168,7 +125,8 @@ class App:
             command += options(url,kind,quality,language,folder)
             with (folder/'진단.log').open('w',encoding='utf-8') as log:
                 self.proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                             text=True, encoding='utf-8', errors='replace', creationflags=subprocess.CREATE_NO_WINDOW)
+                                             text=True, encoding='utf-8', errors='replace', creationflags=subprocess.CREATE_NO_WINDOW,
+                                             env=dict(os.environ,PYTHONIOENCODING='utf-8',PYTHONUTF8='1'))
                 if self.stop.is_set():
                     self.kill()
                 for line in self.proc.stdout:
@@ -216,8 +174,23 @@ class App:
     def poll(self):
         while not self.events.empty():
             kind, text = self.events.get_nowait()
-            self.status.set(text)
+            if kind == 'status':
+                match=re.search(r'\[download\]\s+(\d+(?:\.\d+)?)%',text)
+                if match:
+                    self.progress.stop(); self.progress.configure(mode='determinate')
+                    self.progress.set(min(float(match.group(1))/100,0.98))
+                    self.status.set('파일을 가져오고 있어요 · '+match.group(1)+'%')
+                elif 'Downloading' in text or 'Extracting' in text:
+                    self.status.set('영상 정보와 파일을 확인하고 있어요.')
+                elif 'ffmpeg' in text.lower() or 'merger' in text.lower():
+                    self.status.set('파일을 변환하고 있어요. 조금만 기다려 주세요.')
             if kind == 'done':
+                self.status.set(text)
+                self.progress.stop(); self.progress.configure(mode='determinate')
+                success=text.startswith('완료')
+                self.progress.set(1 if success else 0)
+                self.state_label.configure(text='✓  저장 완료' if success else '●  확인해 주세요',text_color=self.accent if success else '#FFB49E')
+                self.busy_ui(False)
                 self.start.configure(state='normal')
                 self.cancel_button.configure(state='disabled')
         self.root.after(150,self.poll)
@@ -229,5 +202,20 @@ if __name__ == '__main__':
         assert transcript('{"events":[{"segs":[{"utf8":"Hello"}]},{"segs":[{"utf8":"there"}]}]}') == 'Hello there\n'
         for tool in ['yt-dlp.exe','node.exe','ffmpeg.exe']:
             assert (ROOT/'bin'/tool).exists(), tool
+    elif '--ui-test' in sys.argv:
+        try:
+            app=App()
+            app.root.update()
+            for mode in ['video','audio','subtitle']:
+                app.choose_mode(mode)
+                app.root.update()
+                assert app.kind.get()==mode
+            app.root.after(300,app.root.destroy)
+            app.root.mainloop()
+        except Exception:
+            import traceback
+            Path('ui-test.log').write_text(traceback.format_exc(),encoding='utf-8')
+            sys.exit(1)
     else:
         App().root.mainloop()
+
