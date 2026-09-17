@@ -119,7 +119,7 @@ class ExtractRequest(BaseModel):
     kind: Literal['video', 'audio', 'subtitle']
     quality: Literal['360', '720', '1080'] = '720'
     language: str = Field(default='ko', pattern=r'^[A-Za-z0-9-]{2,24}$')
-    subtitle_format: Literal['srt', 'txt'] = 'srt'
+    subtitle_format: Literal['srt', 'txt'] = 'txt'
 
 
 def base_command():
@@ -161,9 +161,16 @@ def run_process(job_id, command, timeout=1800):
         update(job_id, process=None)
     text = log.read_text(encoding='utf-8', errors='replace')
     if proc.returncode:
-        lowered = text.lower()
-        if 'sign in' in lowered or 'bot' in lowered:
-            raise RuntimeError('유튜브에서 접근을 제한했습니다. 로그인·봇 확인이 필요한 영상은 현재 지원하지 않습니다.')
+        errors = [x for x in text.splitlines() if 'ERROR:' in x]
+        detail = '\n'.join(errors[-3:]) or 'Extractor exited without an error message.'
+        detail = re.sub(r'https?://\S+', '[URL]', detail)
+        detail = re.sub(r'[\x00-\x08\x0b-\x1f\x7f]', '', detail)[:2000]
+        print(f'[extraction failed] job={job_id} exit={proc.returncode} {detail}', file=sys.stderr, flush=True)
+        lowered = detail.lower()
+        if 'not a bot' in lowered or 'confirm you’re not a bot' in lowered:
+            raise RuntimeError('유튜브가 현재 서버 접속에 봇 확인을 요구했습니다. 자막 형식 문제가 아니며 이 서버에서는 지금 추출할 수 없습니다. [YOUTUBE_BOT_CHECK]')
+        if 'sign in' in lowered or 'login required' in lowered:
+            raise RuntimeError('유튜브가 로그인을 요구했습니다. 로그인 제한 콘텐츠는 지원하지 않습니다. [YOUTUBE_LOGIN_REQUIRED]')
         if 'private' in lowered or 'unavailable' in lowered:
             raise RuntimeError('비공개이거나 사용할 수 없는 영상입니다.')
         if 'requested format' in lowered:
@@ -217,11 +224,19 @@ def json3_text(source: Path, target: Path, fmt: str):
     if fmt == 'srt':
         content = '\n\n'.join(f'{i}\n{timestamp(s)} --> {timestamp(e)}\n{v}' for i, (s, e, v) in enumerate(cues, 1))
     else:
-        lines = []
+        paragraphs = []
         for _, _, value in cues:
-            if not lines or lines[-1] != value:
-                lines.append(value)
-        content = '\n'.join(lines)
+            # Preserve explicit source labels; never infer a speaker from timing.
+            for line in value.splitlines():
+                line = re.sub(r'\s+', ' ', line).strip()
+                if not line:
+                    continue
+                labelled = re.match(r'^(?:>>\s*|[^\W\d][\w .-]{0,29}[:：]\s*)', line)
+                if not paragraphs or labelled:
+                    paragraphs.append(line)
+                else:
+                    paragraphs[-1] += ' ' + line
+        content = '\n\n'.join(paragraphs)
     target.write_text(content + '\n', encoding='utf-8-sig')
 
 
@@ -235,7 +250,7 @@ def extract(job_id, spec):
             raise RuntimeError('영상 정보를 읽지 못했습니다.')
         if info.get('is_live'):
             raise RuntimeError('진행 중인 실시간 방송은 지원하지 않습니다.')
-        if (info.get('duration') or 0) > MAX_SECONDS:
+        if spec.kind != 'subtitle' and (info.get('duration') or 0) > MAX_SECONDS:
             raise RuntimeError('무료 운영용 버전은 15분 이하의 영상을 지원합니다.')
         title = str(info.get('title') or 'YouTube')
         update(job_id, title=title, message='파일을 내려받고 있습니다.')
@@ -297,7 +312,7 @@ def status():
 
 @app.get('/healthz')
 def health():
-    return {'ok': True}
+    return {'ok': True, 'version': 'subtitle-fix-2'}
 
 
 @app.post('/api/jobs')
@@ -362,3 +377,4 @@ if __name__ == '__main__':
     if '--open-browser' in sys.argv:
         threading.Timer(1.5, lambda: webbrowser.open(common)).start()
     uvicorn.run(app, host=BIND_HOST, port=PORT, log_level='warning')
+
