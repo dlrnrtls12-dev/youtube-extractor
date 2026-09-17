@@ -16,10 +16,12 @@ Invoke-WebRequest 'https://raw.githubusercontent.com/yt-dlp/yt-dlp/2026.08.19/LI
 Invoke-WebRequest 'https://raw.githubusercontent.com/nodejs/node/v22.x/LICENSE' -OutFile licenses/node.txt
 Invoke-WebRequest 'https://raw.githubusercontent.com/imageio/imageio-ffmpeg/v0.6.0/LICENSE' -OutFile licenses/imageio-ffmpeg.txt
 Invoke-WebRequest 'https://raw.githubusercontent.com/FFmpeg/FFmpeg/master/COPYING.GPLv3' -OutFile licenses/ffmpeg-gplv3.txt
-python -m PyInstaller --noconfirm --clean --windowed --onedir --name YouTubeExtractor --add-binary 'bin/yt-dlp.exe;bin' --add-binary 'bin/ffmpeg.exe;bin' --add-binary 'bin/node.exe;bin' --add-data 'licenses;licenses' desktop.py
+python -m PyInstaller --noconfirm --clean --windowed --onedir --name YouTubeExtractor --collect-all customtkinter --add-binary 'bin/yt-dlp.exe;bin' --add-binary 'bin/ffmpeg.exe;bin' --add-binary 'bin/node.exe;bin' --add-data 'licenses;licenses' desktop.py
 if ($LASTEXITCODE -ne 0) { throw 'Windows build failed' }
 $test = Start-Process -FilePath dist/YouTubeExtractor/YouTubeExtractor.exe -ArgumentList '--self-test' -PassThru -Wait -WindowStyle Hidden
 if ($test.ExitCode -ne 0) { throw 'Packaged app self-test failed' }
+$uiTest = Start-Process -FilePath dist/YouTubeExtractor/YouTubeExtractor.exe -ArgumentList '--ui-test' -PassThru -Wait -WindowStyle Hidden
+if ($uiTest.ExitCode -ne 0) { Get-Content ui-test.log -ErrorAction SilentlyContinue; throw 'Packaged UI test failed' }
 Copy-Item ../README.md dist/YouTubeExtractor/README.md
 Copy-Item ../THIRD_PARTY.md dist/YouTubeExtractor/THIRD_PARTY.md
 Compress-Archive -Path dist/YouTubeExtractor -DestinationPath YouTubeExtractor-Windows.zip -Force
