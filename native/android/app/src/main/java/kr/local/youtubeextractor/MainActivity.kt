@@ -14,6 +14,7 @@ import java.util.UUID
 import java.util.concurrent.Executors
 
 class MainActivity : Activity() {
+    private lateinit var design: AppDesign
     private val worker = Executors.newSingleThreadExecutor()
     private lateinit var url: EditText
     private lateinit var kind: Spinner
@@ -32,33 +33,20 @@ class MainActivity : Activity() {
 
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
-        window.statusBarColor = Color.rgb(17,24,39)
-        val body = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(24,40,24,36); setBackgroundColor(Color.rgb(17,24,39)) }
-        val scroll = ScrollView(this).apply { addView(body) }
-        setContentView(scroll)
-        scroll.setOnApplyWindowInsetsListener { view, insets ->
+        window.statusBarColor = Color.rgb(16,17,19)
+        design=AppDesign(this)
+        setContentView(design.root)
+        design.root.setOnApplyWindowInsetsListener { view,insets ->
             view.setPadding(insets.systemWindowInsetLeft,insets.systemWindowInsetTop,insets.systemWindowInsetRight,insets.systemWindowInsetBottom)
             insets
         }
-        fun label(text: String, size: Float = 15f) = TextView(this).apply { this.text=text; textSize=size; setTextColor(Color.rgb(229,231,235)); setPadding(0,12,0,10); body.addView(this) }
-        fun spinner(caption: String, values: Array<String>): Spinner {
-            label(caption)
-            return Spinner(this).apply { adapter=ArrayAdapter(this@MainActivity,android.R.layout.simple_spinner_dropdown_item,values); body.addView(this) }
-        }
-        label("유튜브 추출기",28f)
-        label("이 휴대폰에서 직접 처리합니다.\n서버 비용 · AI API 사용 없음")
-        url = EditText(this).apply { hint="유튜브 링크 붙여넣기"; setSingleLine(true); inputType=android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI; body.addView(this) }
-        kind = spinner("저장할 종류", arrayOf("자막","영상 MP4","음성 MP3"))
-        language = spinner("자막 언어", arrayOf("한국어","영어","일본어","중국어 간체"))
-        format = spinner("자막 형식", arrayOf("TXT · 시간 없이 이어 읽기","SRT · 시간 포함"))
-        quality = spinner("영상 최대 화질", arrayOf("720p","360p","1080p"))
-        label("TXT는 원본의 화자 표시를 유지합니다. 화자 자동 판별은 하지 않습니다.\n처리 중에는 앱을 화면에 열어 두세요.")
-        start = Button(this).apply { text="추출 시작 ↓"; body.addView(this); setOnClickListener { extract() } }
-        cancel = Button(this).apply { text="취소"; isEnabled=false; body.addView(this); setOnClickListener { cancelled=true; active?.let { YoutubeDL.destroyProcessById(it) }; status.text="취소 중…" } }
-        status=label("링크를 입력하세요.")
-        save=Button(this).apply { text="파일에 저장"; isEnabled=false; body.addView(this); setOnClickListener { export() } }
-        upgrade=Button(this).apply { text="추출 엔진 업데이트"; body.addView(this); setOnClickListener { updateEngine() } }
-        label("본인 소유 또는 저장 허가를 받은 콘텐츠에 사용하세요.\nAndroid 8 이상 · 64비트 기기 · v1.0.0",12f)
+        url=design.url;kind=design.kind;language=design.language;format=design.format;quality=design.quality
+        status=design.status;start=design.start;cancel=design.cancel;save=design.save;upgrade=design.upgrade
+        start.setOnClickListener { extract() }
+        cancel.isEnabled=false
+        cancel.setOnClickListener { cancelled=true;active?.let { YoutubeDL.destroyProcessById(it) };status.text="취소 중…" }
+        save.isEnabled=false;save.setOnClickListener { export() }
+        upgrade.setOnClickListener { updateEngine() }
         if(intent.action == Intent.ACTION_SEND) url.setText(Regex("https?://\\S+").find(intent.getStringExtra(Intent.EXTRA_TEXT) ?: "")?.value ?: "")
         state?.getString("url")?.let { url.setText(it) }
         state?.getString("result")?.let { path -> File(path).takeIf { it.isFile && it.canonicalPath.startsWith(filesDir.canonicalPath+File.separator) }?.let { result=it; save.isEnabled=true; status.text="이전 결과를 저장할 수 있습니다." } }
@@ -66,6 +54,7 @@ class MainActivity : Activity() {
 
     private fun setBusy(value: Boolean) {
         busy=value
+        design.setBusy(value)
         start.isEnabled=!value; upgrade.isEnabled=!value; cancel.isEnabled=value
         save.isEnabled=!value && result?.isFile == true
         if(value) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -149,3 +138,4 @@ class MainActivity : Activity() {
     override fun onSaveInstanceState(out: Bundle) { out.putString("url",url.text.toString()); result?.let { out.putString("result",it.absolutePath) }; super.onSaveInstanceState(out) }
     override fun onDestroy() { cancelled=true; active?.let { YoutubeDL.destroyProcessById(it) }; worker.shutdown(); super.onDestroy() }
 }
+
