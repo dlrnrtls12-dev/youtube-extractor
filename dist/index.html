@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>유튜브 추출기</title><meta name="description" content="영상, 음성, 기존 자막을 저장하는 추출기">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23ff493e'/%3E%3Cpath d='M16 6v14m-5-5 5 5 5-5M8 23v3h16v-3' fill='none' stroke='white' stroke-width='3'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/style.css"><script defer src="/app.js"></script>
+</head>
+<body>
+<header><a class="brand" href="/"><span class="brand-icon" aria-hidden="true">▶</span>유튜브 추출기</a><span class="badge">AI 토큰 사용 없음</span></header>
+<main>
+<section class="intro"><p class="eyebrow">VIDEO / AUDIO / SUBTITLES</p><h1>링크 하나로, <span>원하는 파일로.</span></h1><p>영상·음성·기존 자막을 원하는 형식으로 저장하세요.</p></section>
+<section class="workspace" aria-label="추출 도구">
+<div class="panel-heading"><div><span class="eyebrow">EXTRACT</span><h2>새 파일 추출</h2></div><span class="panel-number" aria-hidden="true">01</span></div><div id="connect"><p class="hint" id="connection" aria-live="polite">서버에 연결하고 있습니다.</p><button id="reconnect" class="secondary" type="button">다시 연결</button></div>
+<form id="extract">
+<fieldset id="controls" disabled>
+<label for="url"><span class="label-number">1</span> 유튜브 링크</label><input id="url" type="url" required placeholder="https://www.youtube.com/watch?v=…" autocomplete="off">
+<p class="field-label"><span class="label-number">2</span> 저장할 형식</p><div class="modes" role="group" aria-label="추출 종류">
+<button type="button" class="mode selected" data-kind="video" aria-pressed="true"><span class="mode-icon">▶</span><strong>영상</strong><small>MP4</small></button>
+<button type="button" class="mode" data-kind="audio" aria-pressed="false"><span class="mode-icon">♫</span><strong>음성</strong><small>MP3</small></button>
+<button type="button" class="mode" data-kind="subtitle" aria-pressed="false"><span class="mode-icon">≡</span><strong>자막</strong><small>SRT · TXT</small></button>
+</div>
+<div id="video-options"><label for="quality">최대 화질</label><select id="quality"><option value="360">360p · 작은 파일</option><option value="720" selected>720p · 기본 화질</option><option value="1080">1080p · 높은 화질</option></select><p class="hint">원본에서 제공하는 화질 범위 안에서 저장합니다.</p></div>
+<div id="audio-options" hidden><p class="option-note">MP3 · 192 kbps로 저장합니다.</p></div>
+<div id="subtitle-options" hidden><div class="columns"><div><label for="language">자막 언어</label><select id="language"><option value="ko">한국어</option><option value="en">영어</option><option value="ja">일본어</option><option value="zh-Hans">중국어 (간체)</option></select></div><div><label for="subtitle-format">파일 형식</label><select id="subtitle-format"><option value="srt">SRT · 시간 포함</option><option value="txt">TXT · 텍스트만</option></select></div></div><p class="hint">영상에 제공되는 일반·자동 자막을 사용합니다. 새 자막은 생성하지 않습니다.</p></div>
+<button class="primary" id="start" type="submit">영상 추출하기 <span>↓</span></button>
+</fieldset></form>
+<div class="status" id="status" hidden aria-live="polite"><span id="state-label" class="eyebrow">진행 상태</span><h2 id="job-title"></h2><p id="message"></p><progress id="progress" aria-label="추출 진행 중"></progress><button id="cancel" class="secondary" type="button">작업 취소</button><a id="download" class="primary" hidden>파일 저장하기 ↓</a></div>
+<p class="footnote">본인 소유 또는 다운로드 허가를 받은 콘텐츠에 사용하세요.</p>
+</section>
+<section class="service-notes"><p id="access-help">서버 연결 상태를 확인하고 있습니다.</p><div id="addresses" class="addresses"></div><p class="hint">무료 서버는 첫 접속 시 준비 시간이 걸릴 수 있습니다. 한 번에 한 작업 · 최대 15분 영상. 완료한 파일은 바로 저장하세요.</p></section>
+</main><footer>유튜브 추출기 <span>AI API를 사용하지 않는 추출 도구</span></footer>
+</body></html>

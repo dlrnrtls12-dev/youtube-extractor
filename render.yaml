@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: youtube-extractor
+    runtime: docker
+    plan: free
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
