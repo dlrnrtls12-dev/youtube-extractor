@@ -22,12 +22,13 @@
 </div>
 <div id="video-options"><label for="quality">최대 화질</label><select id="quality"><option value="360">360p · 작은 파일</option><option value="720" selected>720p · 기본 화질</option><option value="1080">1080p · 높은 화질</option></select><p class="hint">원본에서 제공하는 화질 범위 안에서 저장합니다.</p></div>
 <div id="audio-options" hidden><p class="option-note">MP3 · 192 kbps로 저장합니다.</p></div>
-<div id="subtitle-options" hidden><div class="columns"><div><label for="language">자막 언어</label><select id="language"><option value="ko">한국어</option><option value="en">영어</option><option value="ja">일본어</option><option value="zh-Hans">중국어 (간체)</option></select></div><div><label for="subtitle-format">파일 형식</label><select id="subtitle-format"><option value="srt">SRT · 시간 포함</option><option value="txt">TXT · 텍스트만</option></select></div></div><p class="hint">영상에 제공되는 일반·자동 자막을 사용합니다. 새 자막은 생성하지 않습니다.</p></div>
+<div id="subtitle-options" hidden><div class="columns"><div><label for="language">자막 언어</label><select id="language"><option value="ko">한국어</option><option value="en">영어</option><option value="ja">일본어</option><option value="zh-Hans">중국어 (간체)</option></select></div><div><label for="subtitle-format">파일 형식</label><select id="subtitle-format"><option value="txt" selected>TXT · 시간 없이 이어 읽기</option><option value="srt">SRT · 시간 포함</option></select></div></div><p class="hint">시간 표시 없이 자막을 이어서 저장합니다. 원본의 이름: 또는 &gt;&gt; 표시는 문단으로 구분합니다. 화자 표시가 없는 자막의 화자를 자동 판별하지는 않습니다. 새 자막은 생성하지 않습니다.</p></div>
 <button class="primary" id="start" type="submit">영상 추출하기 <span>↓</span></button>
 </fieldset></form>
 <div class="status" id="status" hidden aria-live="polite"><span id="state-label" class="eyebrow">진행 상태</span><h2 id="job-title"></h2><p id="message"></p><progress id="progress" aria-label="추출 진행 중"></progress><button id="cancel" class="secondary" type="button">작업 취소</button><a id="download" class="primary" hidden>파일 저장하기 ↓</a></div>
 <p class="footnote">본인 소유 또는 다운로드 허가를 받은 콘텐츠에 사용하세요.</p>
 </section>
-<section class="service-notes"><p id="access-help">서버 연결 상태를 확인하고 있습니다.</p><div id="addresses" class="addresses"></div><p class="hint">무료 서버는 첫 접속 시 준비 시간이 걸릴 수 있습니다. 한 번에 한 작업 · 최대 15분 영상. 완료한 파일은 바로 저장하세요.</p></section>
+<section class="service-notes"><p id="access-help">서버 연결 상태를 확인하고 있습니다.</p><div id="addresses" class="addresses"></div><p class="hint">무료 서버는 첫 접속 시 준비 시간이 걸릴 수 있습니다. 한 번에 한 작업 · 영상·음성 최대 15분 · 자막은 길이 제한 없음. 완료한 파일은 바로 저장하세요.</p></section>
 </main><footer>유튜브 추출기 <span>AI API를 사용하지 않는 추출 도구</span></footer>
 </body></html>
+
