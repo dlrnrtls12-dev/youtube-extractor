@@ -1,0 +1,59 @@
+name: Build device apps
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['native/**', '.github/workflows/native-apps.yml']
+permissions:
+  contents: write
+concurrency:
+  group: native-apps
+  cancel-in-progress: true
+jobs:
+  windows:
+    if: github.event.repository.private == false
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: python -m pip install pyinstaller==6.16.0 imageio-ffmpeg==0.6.0
+      - run: python -m unittest discover -s native/windows -p 'test_*.py'
+      - run: ./native/windows/build.ps1
+        shell: pwsh
+      - name: Publish Windows package
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="device-v1-${GITHUB_RUN_NUMBER}-windows"
+          gh release create "$tag" native/windows/YouTubeExtractor-Windows.zip --target "$GITHUB_SHA" --title "Windows app build ${GITHUB_RUN_NUMBER}" --prerelease --notes "Portable Windows app. Extract ZIP and run YouTubeExtractor.exe. See native/README.md for usage and test limitations."
+  android:
+    if: github.event.repository.private == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+          cache-disabled: true
+      - run: gradle -p native/android :app:testDebugUnitTest :app:assembleDebug --no-daemon
+      - name: Publish Android package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp native/android/app/build/outputs/apk/debug/app-debug.apk YouTubeExtractor-Android.apk
+          tag="device-v1-${GITHUB_RUN_NUMBER}-android"
+          gh release create "$tag" YouTubeExtractor-Android.apk --target "$GITHUB_SHA" --title "Android app build ${GITHUB_RUN_NUMBER}" --prerelease --notes "Initial debug-signed APK, Android 8+ 64-bit. Built and unit-tested; real-device extraction still needs verification. See native/README.md."
+
